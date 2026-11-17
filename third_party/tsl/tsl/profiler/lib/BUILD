@@ -1,3 +1,4 @@
+load("@local_config_sycl//sycl:build_defs.bzl", "if_sycl_is_configured")
 load("@xla//xla/tsl:tsl.bzl", "if_not_android", "internal_visibility", "nvtx_headers")
 load("@xla//xla/tsl:tsl.default.bzl", "filegroup", "get_compatible_with_portable")
 load("@xla//xla/tsl/platform:build_config.bzl", "tsl_cc_test")
@@ -378,11 +379,23 @@ cc_library(
     name = "nvtx_utils_impl",
     srcs = if_cuda_is_configured(
         ["nvtx_utils.cc"],
-        ["nvtx_utils_stub.cc"],
+        if_sycl_is_configured(
+            ["nvtx_utils_itt.cc"],
+            ["nvtx_utils_stub.cc"],
+        ),
     ),
     hdrs = ["nvtx_utils.h"],
     visibility = ["//visibility:public"],
-    deps = if_cuda_is_configured(nvtx_headers()),
+    deps = if_cuda_is_configured(
+        nvtx_headers(),
+        if_sycl_is_configured([
+            "@com_google_absl//absl/base:no_destructor",
+            "@com_google_absl//absl/container:flat_hash_map",
+            "@com_google_absl//absl/strings:string_view",
+            "@com_google_absl//absl/synchronization",
+            "@ittapi//:ittnotify",
+        ]),
+    ),
 )
 
 cc_library(
